@@ -5,65 +5,111 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Auth.OAuth2.Flows;
+using Google.Apis.Auth.OAuth2.Responses;
+using Google.Apis.Drive.v3;
+using Google.Apis.Services;
+using Google.Apis.Util.Store;
 
 namespace MyUpload {
     public partial class MainForm : Form {
+
         public MainForm() {
             InitializeComponent();
-            PopulateDataGridView();
-            songsDataGridView.CellMouseMove += new DataGridViewCellMouseEventHandler(songsDataGridView_CellMouseMove);
+            //PopulateDataGridView();
+
+            //driveDataGridView.CellMouseEnter += new DataGridViewCellEventHandler(songsDataGridView_CellMouseEnter);
+            //driveDataGridView.CellMouseLeave += new DataGridViewCellEventHandler(songsDataGridView_CellMouseLeave);
         }
 
-        private void songsDataGridView_CellMouseMove(object sender, DataGridViewCellMouseEventArgs e) {
-            songsDataGridView.ClearSelection();
+        private void songsDataGridView_CellMouseEnter(object sender, DataGridViewCellEventArgs e) {
             if (e.RowIndex > -1) {
-                songsDataGridView.Rows[e.RowIndex].Selected = true;
+                driveDataGridView.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightBlue;
+            }
+
+        }
+  
+        private void songsDataGridView_CellMouseLeave(object sender, DataGridViewCellEventArgs e) {
+            if (e.RowIndex > -1) {
+                driveDataGridView.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.White;
             }
         }
+   
         private void addNewRowButton_Click(object sender, EventArgs e) {
-            this.songsDataGridView.Rows.Add();
+            this.driveDataGridView.Rows.Add();
         }
 
         private void deleteRowButton_Click(object sender, EventArgs e) {
-            if (this.songsDataGridView.SelectedRows.Count > 0 &&
-                this.songsDataGridView.SelectedRows[0].Index !=
-                this.songsDataGridView.Rows.Count - 1) {
-                this.songsDataGridView.Rows.RemoveAt(
-                    this.songsDataGridView.SelectedRows[0].Index);
+            if (this.driveDataGridView.SelectedRows.Count > 0 &&
+                this.driveDataGridView.SelectedRows[0].Index !=
+                this.driveDataGridView.Rows.Count - 1) {
+                this.driveDataGridView.Rows.RemoveAt(
+                    this.driveDataGridView.SelectedRows[0].Index);
             }
         }
 
-        private void PopulateDataGridView() {
-            string[] row0 = { "11/22/1968", "29", "Revolution 9",
-            "Beatles", "The Beatles [White Album]" };
-            string[] row1 = { "1960", "6", "Fools Rush In",
-            "Frank Sinatra", "Nice 'N' Easy" };
-            string[] row2 = { "11/11/1971", "1", "One of These Days",
-            "Pink Floyd", "Meddle" };
-            string[] row3 = { "1988", "7", "Where Is My Mind?",
-            "Pixies", "Surfer Rosa" };
-            string[] row4 = { "5/1981", "9", "Can't Find My Mind",
-            "Cramps", "Psychedelic Jungle" };
-            string[] row5 = { "6/10/2003", "13",
-            "Scatterbrain. (As Dead As Leaves.)",
-            "Radiohead", "Hail to the Thief" };
-            string[] row6 = { "6/30/1992", "3", "Dress", "P J Harvey", "Dry" };
+        private async void loginButton_Click(object sender, EventArgs e) {
+            statusLabel.Text = "Start";
+            await Task.Run(() => DoLogin());
+            statusLabel.Text = "Done";
+        }
 
-            songsDataGridView.Rows.Add(row0);
-            songsDataGridView.Rows.Add(row1);
-            songsDataGridView.Rows.Add(row2);
-            songsDataGridView.Rows.Add(row3);
-            songsDataGridView.Rows.Add(row4);
-            songsDataGridView.Rows.Add(row5);
-            songsDataGridView.Rows.Add(row6);
+        private async Task DoLogin() {
+            var service = await GetDriveService();
+            var fileList = service.Files.List();
+            fileList.Q = $"";
+            fileList.Fields = "nextPageToken, files(id, name, mimeType, size, parents, owners)";
+            fileList.Spaces = "drive";
 
-            songsDataGridView.Columns[0].DisplayIndex = 3;
-            songsDataGridView.Columns[1].DisplayIndex = 4;
-            songsDataGridView.Columns[2].DisplayIndex = 0;
-            songsDataGridView.Columns[3].DisplayIndex = 1;
-            songsDataGridView.Columns[4].DisplayIndex = 2;
+            var rows = new List<string[]>();
+            string pageToken = null;
+            do {
+                fileList.PageToken = pageToken;
+                var filesResult = fileList.Execute();
+                var files = filesResult.Files;
+                foreach (var f in files) {
+                    if (f.Parents == null) {
+                        rows.Add(new string[] {
+                            f.Name,
+                            f.MimeType,
+                            f.Size.ToString() + " Bytes",
+                            String.Join("; ", f.Owners.Select(o => $"{o.DisplayName} <{o.EmailAddress}>")),
+                            f.Id
+                        });
+                    }
+                }
+
+                driveDataGridView.Invoke((MethodInvoker) delegate {
+                    foreach (var r in rows) {
+                        driveDataGridView.Rows.Add(r);
+                    }
+                });
+                rows.Clear();
+                pageToken = filesResult.NextPageToken;
+            } while (pageToken != null);
+        }
+
+        private async Task<DriveService> GetDriveService() {
+            var storage = new FileDataStore("MyUpload");
+            // await storage.ClearAsync();
+
+            var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
+                GoogleClientSecrets.FromFile("credentials.json").Secrets,
+                new[] { DriveService.Scope.Drive },
+                "user",
+                CancellationToken.None,
+                storage
+            );
+
+            var service = new DriveService(new BaseClientService.Initializer {
+                HttpClientInitializer = credential,
+            });
+
+            return service;
         }
     }
 }
