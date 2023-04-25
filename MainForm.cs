@@ -162,7 +162,7 @@ namespace MyUpload {
                             if (f.EndsWith(dummyName)) {
                                 var folder = f.Substring(0, f.Length - dummyName.Length - 1);
                                 var parent = path.Peek().Item2;
-                                WalkDirectory(folder, parent, uploads);
+                                await WalkDirectory(folder, parent, uploads);
                             }
                         }
                     }
@@ -193,7 +193,7 @@ namespace MyUpload {
             }
         }
 
-        private void WalkDirectory(string folder, string parent, List<Tuple<string, string>> uploads) {
+        private async Task WalkDirectory(string folder, string parent, List<Tuple<string, string>> uploads) {
             var driveFolder = new Google.Apis.Drive.v3.Data.File {
                 Name = Path.GetFileName(folder),
                 MimeType = "application/vnd.google-apps.folder"
@@ -202,7 +202,7 @@ namespace MyUpload {
                 driveFolder.Parents = new string[] { parent };
             }
             var request = service.Files.Create(driveFolder);
-            var response = request.Execute();
+            var response = await request.ExecuteAsync();
 
             Console.WriteLine($"Create successful. {folder} File ID: {response.Id}");
 
@@ -213,10 +213,12 @@ namespace MyUpload {
             }
 
             var dirs = Directory.GetDirectories(folder);
+            var tasks = new List<Task>();
             foreach (var dir in dirs) {
-                WalkDirectory(dir, response.Id, uploads);
+                tasks.Add(WalkDirectory(dir, response.Id, uploads));
                 Console.WriteLine($"dir: {dir}");
             }
+            await Task.WhenAll(tasks);
         }
 
         private async Task ListDirectory(string parent = null) {
