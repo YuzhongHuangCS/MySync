@@ -170,7 +170,7 @@ namespace MyUpload {
                     await Task.Run(() => {
                         var options = new ParallelOptions() { MaxDegreeOfParallelism = 10 };
                         Parallel.ForEach(uploads, options, tp => {
-                            using (var stream = new FileStream(tp.Item1, FileMode.Open)) {
+                            using (var stream = new FileStream(tp.Item1, FileMode.Open, FileAccess.Read)) {
                                 var driveFile = new Google.Apis.Drive.v3.Data.File {
                                     Name = Path.GetFileName(tp.Item1)
                                 };
