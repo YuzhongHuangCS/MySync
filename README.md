@@ -1,6 +1,6 @@
 # MyUpload
 
-Google Drive's WebUI having serval issue:
+Google Drive's WebUI having serval issues:
 1. Didn't display orphan files.
-2. Slow to scroll once there are a lot of files (images) in a folder.
-3. Upload/download is very slow, and is single thread only.
+2. Unresponsive if there are a lot of files (images) in a folder.
+3. Upload/download is slow, and only utilize one thread.

@@ -12,6 +12,7 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
+using System.Reflection;
 
 namespace MyUpload {
     public partial class MainForm : Form {
@@ -20,6 +21,14 @@ namespace MyUpload {
 
         public MainForm() {
             InitializeComponent();
+
+            typeof(DataGridView).InvokeMember(
+               "DoubleBuffered",
+               BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty,
+               null,
+               driveDataGridView,
+               new object[] { true }
+            );
 
             driveDataGridView.RowEnter += new DataGridViewCellEventHandler(driveDataGridView_CellMouseEnter);
             driveDataGridView.RowLeave += new DataGridViewCellEventHandler(driveDataGridView_CellMouseLeave);
@@ -228,26 +237,28 @@ namespace MyUpload {
                 driveDataGridView.Rows.Clear();
             });
 
-            var rows = new List<string[]>();
+            var rows = new List<DataGridViewRow>();
             do {
                 var filesResult = fileList.Execute();
                 var files = filesResult.Files;
                 foreach (var f in files) {
                     if (f.Parents == null || f.Parents.Contains(parent)) {
-                        rows.Add(new string[] {
-                            f.Name,
-                            f.MimeType,
-                            f.Size.HasValue ? $"{f.Size / 1024.0 / 1024.0:0.##} MB" : "",
-                            string.Join("; ", f.Owners.Select(o => $"{o.DisplayName} <{o.EmailAddress}>")),
-                            f.Id
-                        });
+                        DataGridViewRow row = new DataGridViewRow();
+                        row.CreateCells(driveDataGridView);
+                        row.DefaultCellStyle = driveDataGridView.RowTemplate.DefaultCellStyle.Clone();
+                        row.Height = driveDataGridView.RowTemplate.Height;
+
+                        row.Cells[0].Value = f.Name;
+                        row.Cells[1].Value = f.MimeType;
+                        row.Cells[2].Value = f.Size.HasValue ? $"{f.Size / 1024.0 / 1024.0:0.##} MB" : "";
+                        row.Cells[3].Value = string.Join("; ", f.Owners.Select(o => $"{o.DisplayName} <{o.EmailAddress}>"));
+                        row.Cells[4].Value = f.Id;
+                        rows.Add(row);
                     }
                 }
 
                 driveDataGridView.Invoke((MethodInvoker) delegate {
-                    foreach (var r in rows) {
-                        driveDataGridView.Rows.Add(r);
-                    }
+                    driveDataGridView.Rows.AddRange(rows.ToArray());
                 });
                 rows.Clear();
                 fileList.PageToken = filesResult.NextPageToken;

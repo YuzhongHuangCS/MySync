@@ -234,14 +234,14 @@ namespace MyUpload {
         private Button loginButton;
         private Label statusLabel;
         private Label pathHintLabel;
+        private Label pathLabel;
+        private Button uploadButton;
+        private Button downloadButton;
         private DataGridViewTextBoxColumn FileName;
         private DataGridViewTextBoxColumn MimeType;
         private DataGridViewTextBoxColumn FileSize;
         private DataGridViewTextBoxColumn OwnerInfo;
         private DataGridViewTextBoxColumn ID;
-        private Label pathLabel;
-        private Button uploadButton;
-        private Button downloadButton;
     }
 }
 
