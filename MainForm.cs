@@ -4,13 +4,13 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Web;
 using Google.Apis.Auth.OAuth2;
-using Google.Apis.Auth.OAuth2.Flows;
-using Google.Apis.Auth.OAuth2.Responses;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
@@ -18,7 +18,7 @@ using Google.Apis.Util.Store;
 namespace MyUpload {
     public partial class MainForm : Form {
         private DriveService service;
-        private List<Tuple<string, string>> path = new List<Tuple<string, string>>();
+        private Stack<Tuple<string, string>> path = new Stack<Tuple<string, string>>();
 
         public MainForm() {
             InitializeComponent();
@@ -44,51 +44,172 @@ namespace MyUpload {
             if (e.RowIndex > -1) {
                 var row = driveDataGridView.Rows[e.RowIndex];
                 if ((string) row.Cells[1].Value == "application/vnd.google-apps.folder") {
-                    var parent = (string) row.Cells[4].Value;
+                    var parentName = (string)row.Cells[0].Value;
+                    var parentId = (string) row.Cells[4].Value;
 
-                    path.Add(Tuple.Create(parent, (string)row.Cells[0].Value));
-                    pathLabel.Text = path.Count > 1 ? String.Join("/", path.Select(t => t.Item2)) : "/";
+                    path.Push(Tuple.Create(parentName, parentId));
+                    pathLabel.Text = String.Join("/", path.Select(t => t.Item1).Reverse());
 
                     statusLabel.Text = "Loading";
-                    await Task.Run(() => ListDirectory(parent));
+                    await Task.Run(() => ListDirectory(parentId));
                     statusLabel.Text = "Done";
                 }
             }
         }
  
-        private async void upButton_Click(object sender, EventArgs e) {
+        private async void parentButton_Click(object sender, EventArgs e) {
             if (path.Count > 1) {
-                path.RemoveAt(path.Count - 1);
-                var tuple = path[path.Count - 1];
-                pathLabel.Text = path.Count > 1 ? String.Join("/", path.Select(t => t.Item2)) : "/";
+                path.Pop();
+                var tuple = path.Peek();
+                pathLabel.Text = String.Join("/", path.Select(t => t.Item1).Reverse());
 
                 statusLabel.Text = "Loading";
-                var parent = tuple.Item1;
-                if (parent == "") {
-                    parent = null;
-                }
+                var parent = tuple.Item2;
                 await Task.Run(() => ListDirectory(parent));
                 statusLabel.Text = "Done";
             }
         }
 
-        private void deleteRowButton_Click(object sender, EventArgs e) {
-            if (this.driveDataGridView.SelectedRows.Count > 0 &&
-                this.driveDataGridView.SelectedRows[0].Index !=
-                this.driveDataGridView.Rows.Count - 1) {
-                this.driveDataGridView.Rows.RemoveAt(
-                    this.driveDataGridView.SelectedRows[0].Index);
-            }
-        }
-
         private async void loginButton_Click(object sender, EventArgs e) {
             path.Clear();
-            path.Add(Tuple.Create("", ""));
-            pathLabel.Text = path.Count > 1 ? String.Join("/", path.Select(t => t.Item2)) : "/";
+            path.Push(Tuple.Create<string, string>("/", null));
+            pathLabel.Text = String.Join("/", path.Select(t => t.Item1).Reverse());
 
             statusLabel.Text = "Loading";
             await Task.Run(() => ListDirectory());
             statusLabel.Text = "Done";
+        }
+
+        private async void logoutButton_Click(object sender, EventArgs e) {
+            var storage = new FileDataStore("MyUpload");
+            await storage.ClearAsync();
+
+            Application.Exit();
+        }
+
+        private async void downloadButton_Click(object sender, EventArgs e) {
+            if (service != null && driveDataGridView.SelectedCells.Count > 0) {
+                FolderBrowserDialog dialog = new FolderBrowserDialog();
+                if (dialog.ShowDialog() == DialogResult.OK) {
+                    var indexSet = new HashSet<int>();
+                    foreach (DataGridViewCell cell in driveDataGridView.SelectedCells) {
+                        indexSet.Add(cell.RowIndex);
+                    }
+
+                    statusLabel.Text = "Downloading";
+                    await Task.Run(() => {
+                        var options = new ParallelOptions() { MaxDegreeOfParallelism = 10 };
+                        Parallel.ForEach(indexSet, options, index => {
+                            string ID = (string)driveDataGridView.Rows[index].Cells[4].Value;
+                            string filename = dialog.SelectedPath + "\\" + (string)driveDataGridView.Rows[index].Cells[0].Value;
+                            DownloadFile(ID, filename);
+                        });
+                    });
+                    statusLabel.Text = "Done";
+                }
+            } else {
+                MessageBox.Show("Please Login First");
+            }
+        }
+
+        private void DownloadFile(string ID, string filename) {
+            var request = service.Files.Get(ID);
+            using (var stream = new FileStream(filename, FileMode.Create)) {
+                request.MediaDownloader.ProgressChanged += (Google.Apis.Download.IDownloadProgress progress) => {
+                    switch (progress.Status) {
+                        case Google.Apis.Download.DownloadStatus.Downloading: {
+                                Console.WriteLine($"{filename}: {progress.BytesDownloaded} Bytes");
+                                break;
+                            }
+                        case Google.Apis.Download.DownloadStatus.Completed: {
+                                Console.WriteLine($"{filename}: Download complete.");
+                                break;
+                            }
+                        case Google.Apis.Download.DownloadStatus.Failed: {
+                                Console.WriteLine($"{filename}: Download failed.");
+                                break;
+                            }
+                    }
+                };
+                request.Download(stream);
+            }
+        }
+
+        private async void uploadButton_Click(object sender, EventArgs e) {
+            const string dummyName = "Folder";
+            if (service != null) {
+                OpenFileDialog dialog = new OpenFileDialog {
+                    ValidateNames = false,
+                    CheckFileExists = false,
+                    CheckPathExists = true,
+                    FileName = dummyName,
+                    Multiselect = true
+                };
+                if (dialog.ShowDialog() == DialogResult.OK) {
+                    statusLabel.Text = "Uploading";
+                    var uploads = new List<Tuple<string, string>>();
+                    foreach (var f in dialog.FileNames) {
+                        if (File.Exists(f)) {
+                            uploads.Add(Tuple.Create(f, path.Peek().Item2));
+                        } else {
+                            if (f.EndsWith(dummyName)) {
+                                var folder = f.Substring(0, f.Length - dummyName.Length - 1);
+                                var parent = path.Peek().Item2;
+                                WalkDirectory(folder, parent, uploads);
+                            }
+                        }
+                    }
+
+                    await Task.Run(() => {
+                        var options = new ParallelOptions() { MaxDegreeOfParallelism = 10 };
+                        Parallel.ForEach(uploads, options, tp => {
+                            using (var stream = new FileStream(tp.Item1, FileMode.Open)) {
+                                var driveFile = new Google.Apis.Drive.v3.Data.File {
+                                    Name = Path.GetFileName(tp.Item1)
+                                };
+                                if (tp.Item2 != null) {
+                                    driveFile.Parents = new string[] { tp.Item2 };
+                                }
+                                var request = service.Files.Create(driveFile, stream, MimeMapping.GetMimeMapping(tp.Item1));
+                                request.Fields = "id";
+                                request.Upload();
+
+                                Console.WriteLine($"Upload successful. {tp.Item1} File ID: {request.ResponseBody.Id}");
+                            }
+                        });
+                    });
+                    statusLabel.Text = "Done";
+                }
+
+            } else {
+                MessageBox.Show("Please Login First");
+            }
+        }
+
+        private void WalkDirectory(string folder, string parent, List<Tuple<string, string>> uploads) {
+            var driveFolder = new Google.Apis.Drive.v3.Data.File {
+                Name = Path.GetFileName(folder),
+                MimeType = "application/vnd.google-apps.folder"
+            };
+            if (parent != null) {
+                driveFolder.Parents = new string[] { parent };
+            }
+            var request = service.Files.Create(driveFolder);
+            var response = request.Execute();
+
+            Console.WriteLine($"Create successful. {folder} File ID: {response.Id}");
+
+            var files = Directory.EnumerateFiles(folder);
+            foreach (var file in files) {
+                uploads.Add(Tuple.Create(file, response.Id));
+                Console.WriteLine($"file: {file}");
+            }
+
+            var dirs = Directory.GetDirectories(folder);
+            foreach (var dir in dirs) {
+                WalkDirectory(dir, response.Id, uploads);
+                Console.WriteLine($"dir: {dir}");
+            }
         }
 
         private async Task ListDirectory(string parent = null) {
@@ -110,9 +231,7 @@ namespace MyUpload {
             });
 
             var rows = new List<string[]>();
-            string pageToken = null;
             do {
-                fileList.PageToken = pageToken;
                 var filesResult = fileList.Execute();
                 var files = filesResult.Files;
                 foreach (var f in files) {
@@ -120,7 +239,7 @@ namespace MyUpload {
                         rows.Add(new string[] {
                             f.Name,
                             f.MimeType,
-                            f.Size.HasValue ? f.Size.ToString() + " Bytes" : "",
+                            f.Size.HasValue ? $"{f.Size / 1024.0 / 1024.0:0.##} MB" : "",
                             String.Join("; ", f.Owners.Select(o => $"{o.DisplayName} <{o.EmailAddress}>")),
                             f.Id
                         });
@@ -133,13 +252,12 @@ namespace MyUpload {
                     }
                 });
                 rows.Clear();
-                pageToken = filesResult.NextPageToken;
-            } while (pageToken != null);
+                fileList.PageToken = filesResult.NextPageToken;
+            } while (fileList.PageToken != null);
         }
 
         private async Task<DriveService> GetDriveService() {
             var storage = new FileDataStore("MyUpload");
-            // await storage.ClearAsync();
 
             var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                 GoogleClientSecrets.FromFile("credentials.json").Secrets,
