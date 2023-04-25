@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -44,11 +42,11 @@ namespace MyUpload {
             if (e.RowIndex > -1) {
                 var row = driveDataGridView.Rows[e.RowIndex];
                 if ((string) row.Cells[1].Value == "application/vnd.google-apps.folder") {
-                    var parentName = (string)row.Cells[0].Value;
+                    var parentName = (string) row.Cells[0].Value;
                     var parentId = (string) row.Cells[4].Value;
 
                     path.Push(Tuple.Create(parentName, parentId));
-                    pathLabel.Text = String.Join("/", path.Select(t => t.Item1).Reverse());
+                    pathLabel.Text = string.Join("/", path.Select(t => t.Item1).Reverse());
 
                     statusLabel.Text = "Loading";
                     await Task.Run(() => ListDirectory(parentId));
@@ -61,7 +59,7 @@ namespace MyUpload {
             if (path.Count > 1) {
                 path.Pop();
                 var tuple = path.Peek();
-                pathLabel.Text = String.Join("/", path.Select(t => t.Item1).Reverse());
+                pathLabel.Text = string.Join("/", path.Select(t => t.Item1).Reverse());
 
                 statusLabel.Text = "Loading";
                 var parent = tuple.Item2;
@@ -73,7 +71,7 @@ namespace MyUpload {
         private async void loginButton_Click(object sender, EventArgs e) {
             path.Clear();
             path.Push(Tuple.Create<string, string>("/", null));
-            pathLabel.Text = String.Join("/", path.Select(t => t.Item1).Reverse());
+            pathLabel.Text = string.Join("/", path.Select(t => t.Item1).Reverse());
 
             statusLabel.Text = "Loading";
             await Task.Run(() => ListDirectory());
@@ -240,7 +238,7 @@ namespace MyUpload {
                             f.Name,
                             f.MimeType,
                             f.Size.HasValue ? $"{f.Size / 1024.0 / 1024.0:0.##} MB" : "",
-                            String.Join("; ", f.Owners.Select(o => $"{o.DisplayName} <{o.EmailAddress}>")),
+                            string.Join("; ", f.Owners.Select(o => $"{o.DisplayName} <{o.EmailAddress}>")),
                             f.Id
                         });
                     }
