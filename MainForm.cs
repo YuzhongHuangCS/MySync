@@ -20,6 +20,7 @@ namespace MyUpload {
         private FileDataStore LOCAL_STORAGE;
         private DriveService DRIVE_SERVICE;
         private Stack<Tuple<string, string>> PATH;
+        private DateTime START_TIME;
 
         public MainForm() {
             InitializeComponent();
@@ -257,6 +258,8 @@ namespace MyUpload {
         }
 
         private async Task ListDirectory(string parent = null) {
+            START_TIME = DateTime.Now;
+            var start_time = START_TIME;
             var fileList = DRIVE_SERVICE.Files.List();
 
             if (parent == null) {
@@ -300,7 +303,9 @@ namespace MyUpload {
                         rows.Add(row);
                     }
                 }
-
+                if (START_TIME > start_time) {
+                    break;
+                }
                 DriveDataGridView.Invoke((MethodInvoker)delegate {
                     DriveDataGridView.Rows.AddRange(rows.ToArray());
                 });

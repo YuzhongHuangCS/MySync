@@ -26,6 +26,7 @@ namespace MyUpload {
         /// </summary>
         private void InitializeComponent() {
             DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             DriveDataGridView = new DataGridView();
             FileName = new DataGridViewTextBoxColumn();
             MimeType = new DataGridViewTextBoxColumn();
@@ -168,7 +169,7 @@ namespace MyUpload {
             PathLabel.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             PathLabel.Location = new System.Drawing.Point(858, 14);
             PathLabel.Name = "PathLabel";
-            PathLabel.Size = new System.Drawing.Size(45, 25);
+            PathLabel.Size = new System.Drawing.Size(48, 28);
             PathLabel.TabIndex = 4;
             PathLabel.Text = "Null";
             // 
@@ -178,7 +179,7 @@ namespace MyUpload {
             PathHintLabel.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             PathHintLabel.Location = new System.Drawing.Point(724, 14);
             PathHintLabel.Name = "PathHintLabel";
-            PathHintLabel.Size = new System.Drawing.Size(128, 25);
+            PathHintLabel.Size = new System.Drawing.Size(124, 28);
             PathHintLabel.TabIndex = 2;
             PathHintLabel.Text = "Current Path:";
             // 
@@ -188,7 +189,7 @@ namespace MyUpload {
             StatusLabel.AutoSize = true;
             StatusLabel.Location = new System.Drawing.Point(1340, 14);
             StatusLabel.Name = "StatusLabel";
-            StatusLabel.Size = new System.Drawing.Size(68, 25);
+            StatusLabel.Size = new System.Drawing.Size(65, 28);
             StatusLabel.TabIndex = 3;
             StatusLabel.Text = "Ready";
             StatusLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -236,6 +237,7 @@ namespace MyUpload {
             ClientSize = new System.Drawing.Size(1582, 941);
             Controls.Add(ButtonPanel);
             Controls.Add(DriveDataGridView);
+            Icon = (System.Drawing.Icon)resources.GetObject("$this.Icon");
             Margin = new Padding(3, 4, 3, 4);
             Name = "MainForm";
             Text = "MainForm";

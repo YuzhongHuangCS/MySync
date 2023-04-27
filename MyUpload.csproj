@@ -5,9 +5,26 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+    <ApplicationIcon>logo.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Include="logo.ico" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Google.Apis.Drive.v3" Version="1.60.0.3024" />
     <PackageReference Include="MimeMapping" Version="2.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
   </ItemGroup>
 </Project>
