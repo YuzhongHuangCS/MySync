@@ -16,13 +16,14 @@ using System.Reflection;
 namespace MyUpload {
     public partial class MainForm : Form {
         public static string FOLDER_MIME = "application/vnd.google-apps.folder";
-        private Stack<Tuple<string, string>> PATH = new Stack<Tuple<string, string>>();
+        private Stack<Tuple<string, string>> PATH;
         private DriveService DRIVE_SERVICE;
         private string ROOT_ID;
         private Task<List<string>> ALL_FOLDERS_ID;
 
         public MainForm() {
             InitializeComponent();
+            PATH = new Stack<Tuple<string, string>>();
 
             typeof(DataGridView).InvokeMember(
                "DoubleBuffered",
@@ -32,8 +33,8 @@ namespace MyUpload {
                new object[] { true }
             );
 
-            DriveDataGridView.RowEnter += new DataGridViewCellEventHandler(DriveDataGridView_CellMouseEnter);
-            DriveDataGridView.RowLeave += new DataGridViewCellEventHandler(DriveDataGridView_CellMouseLeave);
+            DriveDataGridView.CellMouseEnter += new DataGridViewCellEventHandler(DriveDataGridView_CellMouseEnter);
+            DriveDataGridView.CellMouseLeave += new DataGridViewCellEventHandler(DriveDataGridView_CellMouseLeave);
             DriveDataGridView.CellDoubleClick += new DataGridViewCellEventHandler(DriveDataGridView_CellDoubleClick);
         }
 
@@ -42,7 +43,7 @@ namespace MyUpload {
                 DriveDataGridView.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightBlue;
             }
         }
-  
+
         private void DriveDataGridView_CellMouseLeave(object sender, DataGridViewCellEventArgs e) {
             if (e.RowIndex > -1) {
                 DriveDataGridView.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.White;
@@ -52,9 +53,9 @@ namespace MyUpload {
         private async void DriveDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e) {
             if (e.RowIndex > -1) {
                 var row = DriveDataGridView.Rows[e.RowIndex];
-                if ((string) row.Cells[1].Value == FOLDER_MIME) {
-                    var parentName = (string) row.Cells[0].Value;
-                    var parentId = (string) row.Cells[4].Value;
+                if ((string)row.Cells[1].Value == FOLDER_MIME) {
+                    var parentName = (string)row.Cells[0].Value;
+                    var parentId = (string)row.Cells[4].Value;
 
                     PATH.Push(Tuple.Create(parentName, parentId));
                     PathLabel.Text = string.Join("/", PATH.Select(t => t.Item1).Reverse());
@@ -65,7 +66,7 @@ namespace MyUpload {
                 }
             }
         }
- 
+
         private async void ParentButton_Click(object sender, EventArgs e) {
             if (PATH.Count > 1) {
                 PATH.Pop();
@@ -210,7 +211,7 @@ namespace MyUpload {
                 foreach (var index in indexSet) {
                     string fileName = (string)DriveDataGridView.Rows[index].Cells[0].Value;
                     string type = (string)DriveDataGridView.Rows[index].Cells[1].Value;
-                    string ID = (string) DriveDataGridView.Rows[index].Cells[4].Value;
+                    string ID = (string)DriveDataGridView.Rows[index].Cells[4].Value;
                     if (type != FOLDER_MIME) {
                         Console.WriteLine($"del: {fileName}");
                         var driveFile = new Google.Apis.Drive.v3.Data.File {
@@ -302,7 +303,7 @@ namespace MyUpload {
                     }
                 }
 
-                DriveDataGridView.Invoke((MethodInvoker) delegate {
+                DriveDataGridView.Invoke((MethodInvoker)delegate {
                     DriveDataGridView.Rows.AddRange(rows.ToArray());
                 });
                 rows.Clear();
@@ -311,14 +312,12 @@ namespace MyUpload {
         }
 
         private async Task InitDriveService() {
-            var storage = new FileDataStore("MyUpload");
-
             var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                 GoogleClientSecrets.FromFile("credentials.json").Secrets,
                 new[] { DriveService.Scope.Drive },
                 "user",
                 CancellationToken.None,
-                storage
+                new FileDataStore("MyUpload")
             );
 
             DRIVE_SERVICE = new DriveService(new BaseClientService.Initializer {
@@ -343,7 +342,7 @@ namespace MyUpload {
             for (int i = 0; i < 5; i++) {
                 var foldersResult = await folderList.ExecuteAsync();
                 parentList.AddRange(foldersResult.Files.Select(f => f.Id));
-                
+
                 folderList.PageToken = foldersResult.NextPageToken;
                 Console.WriteLine(folderList.PageToken);
 
