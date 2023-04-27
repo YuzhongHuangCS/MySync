@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Data;
 using System.Drawing;
 using System.Linq;
@@ -16,13 +17,13 @@ using System.Reflection;
 namespace MyUpload {
     public partial class MainForm : Form {
         public static string FOLDER_MIME = "application/vnd.google-apps.folder";
-        private Stack<Tuple<string, string>> PATH;
+        private FileDataStore LOCAL_STORAGE;
         private DriveService DRIVE_SERVICE;
-        private string ROOT_ID;
-        private Task<List<string>> ALL_FOLDERS_ID;
+        private Stack<Tuple<string, string>> PATH;
 
         public MainForm() {
             InitializeComponent();
+            LOCAL_STORAGE = new FileDataStore("MyUpload");
             PATH = new Stack<Tuple<string, string>>();
 
             typeof(DataGridView).InvokeMember(
@@ -82,6 +83,7 @@ namespace MyUpload {
 
         private async void LoginButton_Click(object sender, EventArgs e) {
             if (DRIVE_SERVICE == null) {
+                StatusLabel.Text = "Initializing";
                 await InitDriveService();
             }
 
@@ -95,9 +97,7 @@ namespace MyUpload {
         }
 
         private async void LogoutButton_Click(object sender, EventArgs e) {
-            var storage = new FileDataStore("MyUpload");
-            await storage.ClearAsync();
-
+            await LOCAL_STORAGE.ClearAsync();
             Application.Exit();
         }
 
@@ -260,16 +260,14 @@ namespace MyUpload {
             var fileList = DRIVE_SERVICE.Files.List();
 
             if (parent == null) {
-                var parentList = await ALL_FOLDERS_ID;
-                var parentString = string.Join(" and ", parentList.Select(p => $"not '{p}' in parents"));
-                Console.WriteLine(parentString);
-                fileList.Q = parentString;
+                fileList.Q = await LOCAL_STORAGE.GetAsync<string>("ROOT_QUERY");
             } else {
                 fileList.Q = $"'{parent}' in parents";
             }
             fileList.Fields = "nextPageToken, files(name, mimeType, size, owners, id, parents)";
             fileList.Spaces = "drive";
 
+            string ROOT_ID = await LOCAL_STORAGE.GetAsync<string>("ROOT_ID");
             DriveDataGridView.Invoke((MethodInvoker)delegate {
                 DriveDataGridView.Rows.Clear();
 
@@ -288,7 +286,7 @@ namespace MyUpload {
             do {
                 var filesResult = await fileList.ExecuteAsync();
                 foreach (var f in filesResult.Files) {
-                    if (f.Parents == null || f.Parents.Contains(parent)) {
+                    if (parent != null || f.Parents == null) {
                         DataGridViewRow row = new DataGridViewRow();
                         row.CreateCells(DriveDataGridView);
                         row.DefaultCellStyle = DriveDataGridView.RowTemplate.DefaultCellStyle.Clone();
@@ -317,19 +315,28 @@ namespace MyUpload {
                 new[] { DriveService.Scope.Drive },
                 "user",
                 CancellationToken.None,
-                new FileDataStore("MyUpload")
+                LOCAL_STORAGE
             );
 
             DRIVE_SERVICE = new DriveService(new BaseClientService.Initializer {
                 HttpClientInitializer = credential,
             });
 
-            ALL_FOLDERS_ID = ListAllFolders();
+            if (await LOCAL_STORAGE.GetAsync<string>("ROOT_ID") == null) {
+                await GetRootID();
+            }
 
-            ROOT_ID = (await DRIVE_SERVICE.Files.Get("root").ExecuteAsync()).Id;
+            if (await LOCAL_STORAGE.GetAsync<string>("ROOT_QUERY") == null) {
+                await GetRootQuery();
+            }
         }
 
-        private async Task<List<string>> ListAllFolders() {
+        private async Task GetRootID() {
+            var ROOT_ID = (await DRIVE_SERVICE.Files.Get("root").ExecuteAsync()).Id;
+            await LOCAL_STORAGE.StoreAsync("ROOT_ID", ROOT_ID);
+        }
+
+        private async Task GetRootQuery() {
             var parentList = new List<string> {
                 "root"
             };
@@ -339,19 +346,47 @@ namespace MyUpload {
             folderList.Fields = "nextPageToken, files(id)";
             folderList.Spaces = "drive";
 
-            for (int i = 0; i < 5; i++) {
+            var db = new ConcurrentDictionary<string, int>();
+            var tasks = new List<Task>();
+
+            do {
                 var foldersResult = await folderList.ExecuteAsync();
-                parentList.AddRange(foldersResult.Files.Select(f => f.Id));
+                foreach (var f in foldersResult.Files) {
+                    tasks.Add(CountFilesInFolder(f.Id).ContinueWith(t => {
+                        if (t.Result > 1) {
+                            db[f.Id] = t.Result;
+                        }
+                    }));
+                }
 
                 folderList.PageToken = foldersResult.NextPageToken;
-                Console.WriteLine(folderList.PageToken);
+            } while (folderList.PageToken != null);
 
-                if (folderList.PageToken == null) {
-                    break;
-                }
+            await Task.WhenAll(tasks);
+            foreach (var item in db.OrderByDescending(t => t.Value).Take(500)) {
+                Console.WriteLine($"{item.Key}: {item.Value}");
             }
+            parentList.AddRange(db.OrderByDescending(t => t.Value).Take(500).Select(t => t.Key));
 
-            return parentList;
+            var ROOT_QUERY = string.Join(" and ", parentList.Select(p => $"not '{p}' in parents"));
+            Console.WriteLine(ROOT_QUERY);
+            await LOCAL_STORAGE.StoreAsync("ROOT_QUERY", ROOT_QUERY);
+        }
+
+        private async Task<int> CountFilesInFolder(string parent) {
+            var fileList = DRIVE_SERVICE.Files.List();
+            fileList.Q = $"'{parent}' in parents";
+            fileList.Fields = "nextPageToken, files(id)";
+            fileList.Spaces = "drive";
+            var count = 0;
+
+            do {
+                var filesResult = await fileList.ExecuteAsync();
+                count += filesResult.Files.Count;
+                fileList.PageToken = filesResult.NextPageToken;
+            } while (fileList.PageToken != null);
+
+            return count;
         }
     }
 }
