@@ -7,7 +7,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Web;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
@@ -184,7 +183,7 @@ namespace MyUpload {
                                 if (tp.Item2 != null) {
                                     driveFile.Parents = new string[] { tp.Item2 };
                                 }
-                                var request = DRIVE_SERVICE.Files.Create(driveFile, stream, MimeMapping.GetMimeMapping(tp.Item1));
+                                var request = DRIVE_SERVICE.Files.Create(driveFile, stream, MimeMapping.MimeUtility.GetMimeMapping(tp.Item1));
                                 request.Fields = "id";
                                 request.Upload();
 
