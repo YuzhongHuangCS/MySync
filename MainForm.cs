@@ -16,8 +16,11 @@ using System.Reflection;
 
 namespace MyUpload {
     public partial class MainForm : Form {
-        private DriveService service;
-        private Stack<Tuple<string, string>> path = new Stack<Tuple<string, string>>();
+        public static string FOLDER_MIME = "application/vnd.google-apps.folder";
+        private Stack<Tuple<string, string>> PATH = new Stack<Tuple<string, string>>();
+        private DriveService DRIVE_SERVICE;
+        private string ROOT_ID;
+        private Task<List<string>> ALL_FOLDERS_ID;
 
         public MainForm() {
             InitializeComponent();
@@ -26,93 +29,97 @@ namespace MyUpload {
                "DoubleBuffered",
                BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty,
                null,
-               driveDataGridView,
+               DriveDataGridView,
                new object[] { true }
             );
 
-            driveDataGridView.RowEnter += new DataGridViewCellEventHandler(driveDataGridView_CellMouseEnter);
-            driveDataGridView.RowLeave += new DataGridViewCellEventHandler(driveDataGridView_CellMouseLeave);
-            driveDataGridView.CellDoubleClick += new DataGridViewCellEventHandler(driveDataGridView_CellDoubleClick);
+            DriveDataGridView.RowEnter += new DataGridViewCellEventHandler(DriveDataGridView_CellMouseEnter);
+            DriveDataGridView.RowLeave += new DataGridViewCellEventHandler(DriveDataGridView_CellMouseLeave);
+            DriveDataGridView.CellDoubleClick += new DataGridViewCellEventHandler(DriveDataGridView_CellDoubleClick);
         }
 
-        private void driveDataGridView_CellMouseEnter(object sender, DataGridViewCellEventArgs e) {
+        private void DriveDataGridView_CellMouseEnter(object sender, DataGridViewCellEventArgs e) {
             if (e.RowIndex > -1) {
-                driveDataGridView.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightBlue;
+                DriveDataGridView.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightBlue;
             }
         }
   
-        private void driveDataGridView_CellMouseLeave(object sender, DataGridViewCellEventArgs e) {
+        private void DriveDataGridView_CellMouseLeave(object sender, DataGridViewCellEventArgs e) {
             if (e.RowIndex > -1) {
-                driveDataGridView.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.White;
+                DriveDataGridView.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.White;
             }
         }
 
-        private async void driveDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e) {
+        private async void DriveDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e) {
             if (e.RowIndex > -1) {
-                var row = driveDataGridView.Rows[e.RowIndex];
-                if ((string) row.Cells[1].Value == "application/vnd.google-apps.folder") {
+                var row = DriveDataGridView.Rows[e.RowIndex];
+                if ((string) row.Cells[1].Value == FOLDER_MIME) {
                     var parentName = (string) row.Cells[0].Value;
                     var parentId = (string) row.Cells[4].Value;
 
-                    path.Push(Tuple.Create(parentName, parentId));
-                    pathLabel.Text = string.Join("/", path.Select(t => t.Item1).Reverse());
+                    PATH.Push(Tuple.Create(parentName, parentId));
+                    PathLabel.Text = string.Join("/", PATH.Select(t => t.Item1).Reverse());
 
-                    statusLabel.Text = "Loading";
+                    StatusLabel.Text = "Loading";
                     await Task.Run(() => ListDirectory(parentId));
-                    statusLabel.Text = "Done";
+                    StatusLabel.Text = "Done";
                 }
             }
         }
  
-        private async void parentButton_Click(object sender, EventArgs e) {
-            if (path.Count > 1) {
-                path.Pop();
-                var tuple = path.Peek();
-                pathLabel.Text = string.Join("/", path.Select(t => t.Item1).Reverse());
+        private async void ParentButton_Click(object sender, EventArgs e) {
+            if (PATH.Count > 1) {
+                PATH.Pop();
+                var tuple = PATH.Peek();
+                PathLabel.Text = string.Join("/", PATH.Select(t => t.Item1).Reverse());
 
-                statusLabel.Text = "Loading";
+                StatusLabel.Text = "Loading";
                 var parent = tuple.Item2;
                 await Task.Run(() => ListDirectory(parent));
-                statusLabel.Text = "Done";
+                StatusLabel.Text = "Done";
             }
         }
 
-        private async void loginButton_Click(object sender, EventArgs e) {
-            path.Clear();
-            path.Push(Tuple.Create<string, string>("/", null));
-            pathLabel.Text = string.Join("/", path.Select(t => t.Item1).Reverse());
+        private async void LoginButton_Click(object sender, EventArgs e) {
+            if (DRIVE_SERVICE == null) {
+                await InitDriveService();
+            }
 
-            statusLabel.Text = "Loading";
+            PATH.Clear();
+            PATH.Push(Tuple.Create<string, string>("/", null));
+            PathLabel.Text = string.Join("/", PATH.Select(t => t.Item1).Reverse());
+
+            StatusLabel.Text = "Loading";
             await Task.Run(() => ListDirectory());
-            statusLabel.Text = "Done";
+            StatusLabel.Text = "Done";
         }
 
-        private async void logoutButton_Click(object sender, EventArgs e) {
+        private async void LogoutButton_Click(object sender, EventArgs e) {
             var storage = new FileDataStore("MyUpload");
             await storage.ClearAsync();
 
             Application.Exit();
         }
 
-        private async void downloadButton_Click(object sender, EventArgs e) {
-            if (service != null && driveDataGridView.SelectedCells.Count > 0) {
+        private async void DownloadButton_Click(object sender, EventArgs e) {
+            if (DRIVE_SERVICE != null && DriveDataGridView.SelectedCells.Count > 0) {
                 FolderBrowserDialog dialog = new FolderBrowserDialog();
                 if (dialog.ShowDialog() == DialogResult.OK) {
                     var indexSet = new HashSet<int>();
-                    foreach (DataGridViewCell cell in driveDataGridView.SelectedCells) {
+                    foreach (DataGridViewCell cell in DriveDataGridView.SelectedCells) {
                         indexSet.Add(cell.RowIndex);
                     }
 
-                    statusLabel.Text = "Downloading";
+                    StatusLabel.Text = "Downloading";
                     await Task.Run(() => {
                         var options = new ParallelOptions() { MaxDegreeOfParallelism = 10 };
                         Parallel.ForEach(indexSet, options, index => {
-                            string ID = (string)driveDataGridView.Rows[index].Cells[4].Value;
-                            string filename = dialog.SelectedPath + "\\" + (string)driveDataGridView.Rows[index].Cells[0].Value;
+                            string ID = (string)DriveDataGridView.Rows[index].Cells[4].Value;
+                            string filename = dialog.SelectedPath + "\\" + (string)DriveDataGridView.Rows[index].Cells[0].Value;
                             DownloadFile(ID, filename);
                         });
                     });
-                    statusLabel.Text = "Done";
+                    StatusLabel.Text = "Done";
                 }
             } else {
                 MessageBox.Show("Please Login First");
@@ -120,7 +127,7 @@ namespace MyUpload {
         }
 
         private void DownloadFile(string ID, string filename) {
-            var request = service.Files.Get(ID);
+            var request = DRIVE_SERVICE.Files.Get(ID);
             using (var stream = new FileStream(filename, FileMode.Create)) {
                 request.MediaDownloader.ProgressChanged += (Google.Apis.Download.IDownloadProgress progress) => {
                     switch (progress.Status) {
@@ -142,9 +149,9 @@ namespace MyUpload {
             }
         }
 
-        private async void uploadButton_Click(object sender, EventArgs e) {
+        private async void UploadButton_Click(object sender, EventArgs e) {
             const string dummyName = "Folder";
-            if (service != null) {
+            if (DRIVE_SERVICE != null) {
                 OpenFileDialog dialog = new OpenFileDialog {
                     ValidateNames = false,
                     CheckFileExists = false,
@@ -153,15 +160,15 @@ namespace MyUpload {
                     Multiselect = true
                 };
                 if (dialog.ShowDialog() == DialogResult.OK) {
-                    statusLabel.Text = "Uploading";
+                    StatusLabel.Text = "Uploading";
                     var uploads = new List<Tuple<string, string>>();
                     foreach (var f in dialog.FileNames) {
                         if (File.Exists(f)) {
-                            uploads.Add(Tuple.Create(f, path.Peek().Item2));
+                            uploads.Add(Tuple.Create(f, PATH.Peek().Item2));
                         } else {
                             if (f.EndsWith(dummyName)) {
                                 var folder = f.Substring(0, f.Length - dummyName.Length - 1);
-                                var parent = path.Peek().Item2;
+                                var parent = PATH.Peek().Item2;
                                 await WalkDirectory(folder, parent, uploads);
                             }
                         }
@@ -177,7 +184,7 @@ namespace MyUpload {
                                 if (tp.Item2 != null) {
                                     driveFile.Parents = new string[] { tp.Item2 };
                                 }
-                                var request = service.Files.Create(driveFile, stream, MimeMapping.GetMimeMapping(tp.Item1));
+                                var request = DRIVE_SERVICE.Files.Create(driveFile, stream, MimeMapping.GetMimeMapping(tp.Item1));
                                 request.Fields = "id";
                                 request.Upload();
 
@@ -185,9 +192,37 @@ namespace MyUpload {
                             }
                         });
                     });
-                    statusLabel.Text = "Done";
+                    StatusLabel.Text = "Done";
                 }
 
+            } else {
+                MessageBox.Show("Please Login First");
+            }
+        }
+
+        private async void DeleteButton_Click(object sender, EventArgs e) {
+            if (DRIVE_SERVICE != null && DriveDataGridView.SelectedCells.Count > 0) {
+                var indexSet = new HashSet<int>();
+                foreach (DataGridViewCell cell in DriveDataGridView.SelectedCells) {
+                    indexSet.Add(cell.RowIndex);
+                }
+
+                StatusLabel.Text = "Deleting";
+                foreach (var index in indexSet) {
+                    string fileName = (string)DriveDataGridView.Rows[index].Cells[0].Value;
+                    string type = (string)DriveDataGridView.Rows[index].Cells[1].Value;
+                    string ID = (string) DriveDataGridView.Rows[index].Cells[4].Value;
+                    if (type != FOLDER_MIME) {
+                        Console.WriteLine($"del: {fileName}");
+                        var driveFile = new Google.Apis.Drive.v3.Data.File {
+                            Trashed = true
+                        };
+
+                        var request = DRIVE_SERVICE.Files.Update(driveFile, ID);
+                        await request.ExecuteAsync();
+                    }
+                }
+                StatusLabel.Text = "Done";
             } else {
                 MessageBox.Show("Please Login First");
             }
@@ -196,12 +231,12 @@ namespace MyUpload {
         private async Task WalkDirectory(string folder, string parent, List<Tuple<string, string>> uploads) {
             var driveFolder = new Google.Apis.Drive.v3.Data.File {
                 Name = Path.GetFileName(folder),
-                MimeType = "application/vnd.google-apps.folder"
+                MimeType = FOLDER_MIME
             };
             if (parent != null) {
                 driveFolder.Parents = new string[] { parent };
             }
-            var request = service.Files.Create(driveFolder);
+            var request = DRIVE_SERVICE.Files.Create(driveFolder);
             var response = await request.ExecuteAsync();
 
             Console.WriteLine($"Create successful. {folder} File ID: {response.Id}");
@@ -222,33 +257,42 @@ namespace MyUpload {
         }
 
         private async Task ListDirectory(string parent = null) {
-            if (service == null) {
-                service = await GetDriveService();
-            }
-            var fileList = service.Files.List();
+            var fileList = DRIVE_SERVICE.Files.List();
 
             if (parent == null) {
-                fileList.Q = $"";
+                var parentList = await ALL_FOLDERS_ID;
+                var parentString = string.Join(" and ", parentList.Select(p => $"not '{p}' in parents"));
+                Console.WriteLine(parentString);
+                fileList.Q = parentString;
             } else {
                 fileList.Q = $"'{parent}' in parents";
             }
             fileList.Fields = "nextPageToken, files(name, mimeType, size, owners, id, parents)";
             fileList.Spaces = "drive";
 
-            driveDataGridView.Invoke((MethodInvoker)delegate {
-                driveDataGridView.Rows.Clear();
+            DriveDataGridView.Invoke((MethodInvoker)delegate {
+                DriveDataGridView.Rows.Clear();
+
+                if (parent == null) {
+                    DriveDataGridView.Rows.Add(new string[] {
+                        "My Drive",
+                        FOLDER_MIME,
+                        "",
+                        "",
+                        ROOT_ID,
+                    });
+                }
             });
 
             var rows = new List<DataGridViewRow>();
             do {
-                var filesResult = fileList.Execute();
-                var files = filesResult.Files;
-                foreach (var f in files) {
+                var filesResult = await fileList.ExecuteAsync();
+                foreach (var f in filesResult.Files) {
                     if (f.Parents == null || f.Parents.Contains(parent)) {
                         DataGridViewRow row = new DataGridViewRow();
-                        row.CreateCells(driveDataGridView);
-                        row.DefaultCellStyle = driveDataGridView.RowTemplate.DefaultCellStyle.Clone();
-                        row.Height = driveDataGridView.RowTemplate.Height;
+                        row.CreateCells(DriveDataGridView);
+                        row.DefaultCellStyle = DriveDataGridView.RowTemplate.DefaultCellStyle.Clone();
+                        row.Height = DriveDataGridView.RowTemplate.Height;
 
                         row.Cells[0].Value = f.Name;
                         row.Cells[1].Value = f.MimeType;
@@ -259,15 +303,15 @@ namespace MyUpload {
                     }
                 }
 
-                driveDataGridView.Invoke((MethodInvoker) delegate {
-                    driveDataGridView.Rows.AddRange(rows.ToArray());
+                DriveDataGridView.Invoke((MethodInvoker) delegate {
+                    DriveDataGridView.Rows.AddRange(rows.ToArray());
                 });
                 rows.Clear();
                 fileList.PageToken = filesResult.NextPageToken;
             } while (fileList.PageToken != null);
         }
 
-        private async Task<DriveService> GetDriveService() {
+        private async Task InitDriveService() {
             var storage = new FileDataStore("MyUpload");
 
             var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
@@ -278,11 +322,38 @@ namespace MyUpload {
                 storage
             );
 
-            var service = new DriveService(new BaseClientService.Initializer {
+            DRIVE_SERVICE = new DriveService(new BaseClientService.Initializer {
                 HttpClientInitializer = credential,
             });
 
-            return service;
+            ALL_FOLDERS_ID = ListAllFolders();
+
+            ROOT_ID = (await DRIVE_SERVICE.Files.Get("root").ExecuteAsync()).Id;
+        }
+
+        private async Task<List<string>> ListAllFolders() {
+            var parentList = new List<string> {
+                "root"
+            };
+
+            var folderList = DRIVE_SERVICE.Files.List();
+            folderList.Q = $"mimeType='{FOLDER_MIME}'";
+            folderList.Fields = "nextPageToken, files(id)";
+            folderList.Spaces = "drive";
+
+            for (int i = 0; i < 5; i++) {
+                var foldersResult = await folderList.ExecuteAsync();
+                parentList.AddRange(foldersResult.Files.Select(f => f.Id));
+                
+                folderList.PageToken = foldersResult.NextPageToken;
+                Console.WriteLine(folderList.PageToken);
+
+                if (folderList.PageToken == null) {
+                    break;
+                }
+            }
+
+            return parentList;
         }
     }
 }
