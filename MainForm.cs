@@ -14,8 +14,10 @@ using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using System.Reflection;
 
-namespace MyUpload {
-    public partial class MainForm : Form {
+namespace MyUpload
+{
+    public partial class MainForm : Form
+    {
         public static string FOLDER_MIME = "application/vnd.google-apps.folder";
         private FileDataStore LOCAL_STORAGE;
         private DriveService DRIVE_SERVICE;
@@ -35,9 +37,20 @@ namespace MyUpload {
                new object[] { true }
             );
 
+            StatusLabel.SizeChanged += new EventHandler(StatusLabel_SizeChanged);
+            DriveDataGridView.SizeChanged += new EventHandler(DriveDataGridView_SizeChanged);
             DriveDataGridView.CellMouseEnter += new DataGridViewCellEventHandler(DriveDataGridView_CellMouseEnter);
             DriveDataGridView.CellMouseLeave += new DataGridViewCellEventHandler(DriveDataGridView_CellMouseLeave);
             DriveDataGridView.CellDoubleClick += new DataGridViewCellEventHandler(DriveDataGridView_CellDoubleClick);
+            DriveDataGridView_SizeChanged(null, null);
+        }
+
+        private void StatusLabel_SizeChanged(object sender, EventArgs e) {
+            StatusLabel.Left = LogoutButton.Left - LogoutButton.Margin.Left - StatusLabel.Margin.Right - StatusLabel.Width;
+        }
+
+        private void DriveDataGridView_SizeChanged(object sender, EventArgs e) {
+            DriveDataGridView.Height = ClientSize.Height - ButtonPanel.Height;
         }
 
         private void DriveDataGridView_CellMouseEnter(object sender, DataGridViewCellEventArgs e) {

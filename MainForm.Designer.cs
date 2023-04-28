@@ -1,7 +1,9 @@
 using System.Windows.Forms;
 
-namespace MyUpload {
-    partial class MainForm {
+namespace MyUpload
+{
+    partial class MainForm
+    {
         /// <summary>
         /// Required designer variable.
         /// </summary>
@@ -49,6 +51,8 @@ namespace MyUpload {
             // 
             // DriveDataGridView
             // 
+            DriveDataGridView.AllowUserToAddRows = false;
+            DriveDataGridView.AllowUserToDeleteRows = false;
             DriveDataGridView.AllowUserToOrderColumns = true;
             DriveDataGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             DriveDataGridView.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.DisplayedCellsExceptHeaders;
@@ -72,7 +76,7 @@ namespace MyUpload {
             DriveDataGridView.RowTemplate.DefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             DriveDataGridView.RowTemplate.Height = 24;
             DriveDataGridView.SelectionMode = DataGridViewSelectionMode.CellSelect;
-            DriveDataGridView.Size = new System.Drawing.Size(1582, 941);
+            DriveDataGridView.Size = new System.Drawing.Size(1182, 553);
             DriveDataGridView.TabIndex = 0;
             // 
             // FileName
@@ -118,10 +122,10 @@ namespace MyUpload {
             ButtonPanel.Controls.Add(ParentButton);
             ButtonPanel.Dock = DockStyle.Bottom;
             ButtonPanel.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            ButtonPanel.Location = new System.Drawing.Point(0, 883);
+            ButtonPanel.Location = new System.Drawing.Point(0, 495);
             ButtonPanel.Margin = new Padding(3, 4, 3, 4);
             ButtonPanel.Name = "ButtonPanel";
-            ButtonPanel.Size = new System.Drawing.Size(1582, 58);
+            ButtonPanel.Size = new System.Drawing.Size(1182, 58);
             ButtonPanel.TabIndex = 1;
             // 
             // DeleteButton
@@ -132,7 +136,7 @@ namespace MyUpload {
             DeleteButton.Margin = new Padding(3, 4, 3, 4);
             DeleteButton.Name = "DeleteButton";
             DeleteButton.Size = new System.Drawing.Size(140, 50);
-            DeleteButton.TabIndex = 7;
+            DeleteButton.TabIndex = 5;
             DeleteButton.Text = "Delete";
             DeleteButton.UseVisualStyleBackColor = true;
             DeleteButton.Click += DeleteButton_Click;
@@ -145,7 +149,7 @@ namespace MyUpload {
             UploadButton.Margin = new Padding(3, 4, 3, 4);
             UploadButton.Name = "UploadButton";
             UploadButton.Size = new System.Drawing.Size(140, 50);
-            UploadButton.TabIndex = 6;
+            UploadButton.TabIndex = 4;
             UploadButton.Text = "Upload";
             UploadButton.UseVisualStyleBackColor = true;
             UploadButton.Click += UploadButton_Click;
@@ -158,7 +162,7 @@ namespace MyUpload {
             DownloadButton.Margin = new Padding(3, 4, 3, 4);
             DownloadButton.Name = "DownloadButton";
             DownloadButton.Size = new System.Drawing.Size(140, 50);
-            DownloadButton.TabIndex = 5;
+            DownloadButton.TabIndex = 3;
             DownloadButton.Text = "Download";
             DownloadButton.UseVisualStyleBackColor = true;
             DownloadButton.Click += DownloadButton_Click;
@@ -167,30 +171,31 @@ namespace MyUpload {
             // 
             PathLabel.AutoSize = true;
             PathLabel.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            PathLabel.Location = new System.Drawing.Point(858, 14);
+            PathLabel.Location = new System.Drawing.Point(864, 14);
             PathLabel.Name = "PathLabel";
-            PathLabel.Size = new System.Drawing.Size(48, 28);
-            PathLabel.TabIndex = 4;
-            PathLabel.Text = "Null";
+            PathLabel.Size = new System.Drawing.Size(44, 28);
+            PathLabel.TabIndex = 7;
+            PathLabel.Text = "null";
             // 
             // PathHintLabel
             // 
             PathHintLabel.AutoSize = true;
             PathHintLabel.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            PathHintLabel.Location = new System.Drawing.Point(724, 14);
+            PathHintLabel.Location = new System.Drawing.Point(734, 14);
             PathHintLabel.Name = "PathHintLabel";
             PathHintLabel.Size = new System.Drawing.Size(124, 28);
-            PathHintLabel.TabIndex = 2;
+            PathHintLabel.TabIndex = 6;
             PathHintLabel.Text = "Current Path:";
             // 
             // StatusLabel
             // 
             StatusLabel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             StatusLabel.AutoSize = true;
-            StatusLabel.Location = new System.Drawing.Point(1340, 14);
+            StatusLabel.Location = new System.Drawing.Point(968, 15);
             StatusLabel.Name = "StatusLabel";
+            StatusLabel.RightToLeft = RightToLeft.Yes;
             StatusLabel.Size = new System.Drawing.Size(65, 28);
-            StatusLabel.TabIndex = 3;
+            StatusLabel.TabIndex = 8;
             StatusLabel.Text = "Ready";
             StatusLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
@@ -200,7 +205,7 @@ namespace MyUpload {
             LoginButton.Margin = new Padding(3, 4, 3, 4);
             LoginButton.Name = "LoginButton";
             LoginButton.Size = new System.Drawing.Size(140, 50);
-            LoginButton.TabIndex = 2;
+            LoginButton.TabIndex = 1;
             LoginButton.Text = "Login";
             LoginButton.UseVisualStyleBackColor = true;
             LoginButton.Click += LoginButton_Click;
@@ -208,11 +213,11 @@ namespace MyUpload {
             // LogoutButton
             // 
             LogoutButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            LogoutButton.Location = new System.Drawing.Point(1439, 4);
+            LogoutButton.Location = new System.Drawing.Point(1039, 4);
             LogoutButton.Margin = new Padding(3, 4, 3, 4);
             LogoutButton.Name = "LogoutButton";
             LogoutButton.Size = new System.Drawing.Size(140, 50);
-            LogoutButton.TabIndex = 1;
+            LogoutButton.TabIndex = 9;
             LogoutButton.Text = "Logout";
             LogoutButton.UseVisualStyleBackColor = true;
             LogoutButton.Click += LogoutButton_Click;
@@ -225,7 +230,7 @@ namespace MyUpload {
             ParentButton.Margin = new Padding(3, 4, 3, 4);
             ParentButton.Name = "ParentButton";
             ParentButton.Size = new System.Drawing.Size(140, 50);
-            ParentButton.TabIndex = 0;
+            ParentButton.TabIndex = 2;
             ParentButton.Text = "Parent";
             ParentButton.UseVisualStyleBackColor = true;
             ParentButton.Click += ParentButton_Click;
@@ -234,7 +239,7 @@ namespace MyUpload {
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new System.Drawing.Size(1582, 941);
+            ClientSize = new System.Drawing.Size(1182, 553);
             Controls.Add(ButtonPanel);
             Controls.Add(DriveDataGridView);
             Icon = (System.Drawing.Icon)resources.GetObject("$this.Icon");
