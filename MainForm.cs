@@ -128,7 +128,7 @@ namespace MyUpload
                         var options = new ParallelOptions() { MaxDegreeOfParallelism = 10 };
                         Parallel.ForEach(indexSet, options, index => {
                             string ID = (string)DriveDataGridView.Rows[index].Cells[4].Value;
-                            string filename = dialog.SelectedPath + "\\" + (string)DriveDataGridView.Rows[index].Cells[0].Value;
+                            string filename = dialog.SelectedPath + Path.DirectorySeparatorChar + (string)DriveDataGridView.Rows[index].Cells[0].Value;
                             DownloadFile(ID, filename);
                         });
                     });
@@ -287,6 +287,8 @@ namespace MyUpload
                         ROOT_ID,
                     });
                 }
+
+                RowsLabel.Text = DriveDataGridView.Rows.Count.ToString();
             });
 
             if (parent == null) {
@@ -332,6 +334,7 @@ namespace MyUpload
                 }
                 DriveDataGridView.Invoke((MethodInvoker)delegate {
                     DriveDataGridView.Rows.AddRange(rows.ToArray());
+                    RowsLabel.Text = DriveDataGridView.Rows.Count.ToString();
                 });
                 rows.Clear();
                 fileList.PageToken = filesResult.NextPageToken;

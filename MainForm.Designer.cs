@@ -36,6 +36,8 @@ namespace MyUpload
             OwnerInfo = new DataGridViewTextBoxColumn();
             ID = new DataGridViewTextBoxColumn();
             ButtonPanel = new Panel();
+            RowsLabel = new Label();
+            RowsHintLabel = new Label();
             DeleteButton = new Button();
             UploadButton = new Button();
             DownloadButton = new Button();
@@ -76,7 +78,7 @@ namespace MyUpload
             DriveDataGridView.RowTemplate.DefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             DriveDataGridView.RowTemplate.Height = 24;
             DriveDataGridView.SelectionMode = DataGridViewSelectionMode.CellSelect;
-            DriveDataGridView.Size = new System.Drawing.Size(1182, 553);
+            DriveDataGridView.Size = new System.Drawing.Size(1282, 553);
             DriveDataGridView.TabIndex = 0;
             // 
             // FileName
@@ -111,6 +113,8 @@ namespace MyUpload
             // 
             // ButtonPanel
             // 
+            ButtonPanel.Controls.Add(RowsLabel);
+            ButtonPanel.Controls.Add(RowsHintLabel);
             ButtonPanel.Controls.Add(DeleteButton);
             ButtonPanel.Controls.Add(UploadButton);
             ButtonPanel.Controls.Add(DownloadButton);
@@ -125,8 +129,28 @@ namespace MyUpload
             ButtonPanel.Location = new System.Drawing.Point(0, 495);
             ButtonPanel.Margin = new Padding(3, 4, 3, 4);
             ButtonPanel.Name = "ButtonPanel";
-            ButtonPanel.Size = new System.Drawing.Size(1182, 58);
+            ButtonPanel.Size = new System.Drawing.Size(1282, 58);
             ButtonPanel.TabIndex = 1;
+            // 
+            // RowsLabel
+            // 
+            RowsLabel.AutoSize = true;
+            RowsLabel.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            RowsLabel.Location = new System.Drawing.Point(801, 15);
+            RowsLabel.Name = "RowsLabel";
+            RowsLabel.Size = new System.Drawing.Size(23, 28);
+            RowsLabel.TabIndex = 11;
+            RowsLabel.Text = "0";
+            // 
+            // RowsHintLabel
+            // 
+            RowsHintLabel.AutoSize = true;
+            RowsHintLabel.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            RowsHintLabel.Location = new System.Drawing.Point(734, 15);
+            RowsHintLabel.Name = "RowsHintLabel";
+            RowsHintLabel.Size = new System.Drawing.Size(61, 28);
+            RowsHintLabel.TabIndex = 10;
+            RowsHintLabel.Text = "Rows:";
             // 
             // DeleteButton
             // 
@@ -171,7 +195,7 @@ namespace MyUpload
             // 
             PathLabel.AutoSize = true;
             PathLabel.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            PathLabel.Location = new System.Drawing.Point(864, 14);
+            PathLabel.Location = new System.Drawing.Point(985, 15);
             PathLabel.Name = "PathLabel";
             PathLabel.Size = new System.Drawing.Size(44, 28);
             PathLabel.TabIndex = 7;
@@ -181,7 +205,7 @@ namespace MyUpload
             // 
             PathHintLabel.AutoSize = true;
             PathHintLabel.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            PathHintLabel.Location = new System.Drawing.Point(734, 14);
+            PathHintLabel.Location = new System.Drawing.Point(855, 15);
             PathHintLabel.Name = "PathHintLabel";
             PathHintLabel.Size = new System.Drawing.Size(124, 28);
             PathHintLabel.TabIndex = 6;
@@ -191,7 +215,7 @@ namespace MyUpload
             // 
             StatusLabel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             StatusLabel.AutoSize = true;
-            StatusLabel.Location = new System.Drawing.Point(968, 15);
+            StatusLabel.Location = new System.Drawing.Point(1068, 15);
             StatusLabel.Name = "StatusLabel";
             StatusLabel.RightToLeft = RightToLeft.Yes;
             StatusLabel.Size = new System.Drawing.Size(65, 28);
@@ -213,7 +237,7 @@ namespace MyUpload
             // LogoutButton
             // 
             LogoutButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            LogoutButton.Location = new System.Drawing.Point(1039, 4);
+            LogoutButton.Location = new System.Drawing.Point(1139, 4);
             LogoutButton.Margin = new Padding(3, 4, 3, 4);
             LogoutButton.Name = "LogoutButton";
             LogoutButton.Size = new System.Drawing.Size(140, 50);
@@ -239,7 +263,7 @@ namespace MyUpload
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new System.Drawing.Size(1182, 553);
+            ClientSize = new System.Drawing.Size(1282, 553);
             Controls.Add(ButtonPanel);
             Controls.Add(DriveDataGridView);
             Icon = (System.Drawing.Icon)resources.GetObject("$this.Icon");
@@ -270,6 +294,8 @@ namespace MyUpload
         private DataGridViewTextBoxColumn FileSize;
         private DataGridViewTextBoxColumn OwnerInfo;
         private DataGridViewTextBoxColumn ID;
+        private Label RowsHintLabel;
+        private Label RowsLabel;
     }
 }
 
