@@ -127,9 +127,14 @@ namespace MyUpload
                     await Task.Run(() => {
                         var options = new ParallelOptions() { MaxDegreeOfParallelism = 10 };
                         Parallel.ForEach(indexSet, options, index => {
-                            string ID = (string)DriveDataGridView.Rows[index].Cells[4].Value;
                             string filename = dialog.SelectedPath + Path.DirectorySeparatorChar + (string)DriveDataGridView.Rows[index].Cells[0].Value;
-                            DownloadFile(ID, filename);
+                            string mimeType = (string)DriveDataGridView.Rows[index].Cells[1].Value;
+                            string ID = (string)DriveDataGridView.Rows[index].Cells[4].Value;
+                            if (mimeType == FOLDER_MIME) {
+                                DownloadDirectory(ID, filename);
+                            } else {
+                                DownloadFile(ID, filename);
+                            }
                         });
                     });
                     StatusLabel.Text = "Done";
@@ -137,6 +142,31 @@ namespace MyUpload
             } else {
                 MessageBox.Show("Please Login First");
             }
+        }
+
+        private void DownloadDirectory(String ID, string filename) {
+            if (!Directory.Exists(filename)) {
+                Directory.CreateDirectory(filename);
+            }
+
+            var fileList = DRIVE_SERVICE.Files.List();
+            fileList.Q = $"'{ID}' in parents";
+            fileList.Fields = "nextPageToken, files(name, mimeType, size, owners, id, parents)";
+            fileList.Spaces = "drive";
+
+            do {
+                var filesResult = fileList.Execute();
+                var options = new ParallelOptions() { MaxDegreeOfParallelism = 10 };
+                Parallel.ForEach(filesResult.Files, options, fd => {
+                    if (fd.MimeType == FOLDER_MIME) {
+                        DownloadDirectory(fd.Id, filename + Path.DirectorySeparatorChar + fd.Name);
+                    } else {
+                        DownloadFile(fd.Id, filename + Path.DirectorySeparatorChar + fd.Name);
+                    }
+                });
+
+                fileList.PageToken = filesResult.NextPageToken;
+            } while (fileList.PageToken != null);
         }
 
         private void DownloadFile(string ID, string filename) {
@@ -179,6 +209,8 @@ namespace MyUpload
                         if (File.Exists(f)) {
                             uploads.Add(Tuple.Create(f, PATH.Peek().Item2));
                         } else {
+                            // User can't select a folder in OpenFileDialog
+                            // So f would never be a folder, no need for Directory.Exists(f)
                             if (f.EndsWith(dummyName)) {
                                 var folder = f.Substring(0, f.Length - dummyName.Length - 1);
                                 var parent = PATH.Peek().Item2;
